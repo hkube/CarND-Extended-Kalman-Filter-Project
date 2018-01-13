@@ -33,6 +33,7 @@ public:
    */
   virtual ~KalmanFilter();
 
+#if 0 // Access the public members directly to initialize them
   /**
    * Init Initializes Kalman filter
    * @param x_in Initial state
@@ -44,6 +45,7 @@ public:
    */
   void Init(Eigen::VectorXd &x_in, Eigen::MatrixXd &P_in, Eigen::MatrixXd &F_in,
       Eigen::MatrixXd &H_in, Eigen::MatrixXd &R_in, Eigen::MatrixXd &Q_in);
+#endif
 
   /**
    * Prediction Predicts the state and the state covariance
