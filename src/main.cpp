@@ -10,6 +10,9 @@ using namespace std;
 // for convenience
 using json = nlohmann::json;
 
+// Define the name of the file in which the RMSE results are stored
+std::string rmseResultFileName = "rmse_laserOnly.csv";
+
 // Checks if the SocketIO event has JSON data.
 // If there is data the JSON object in string format will be returned,
 // else the empty string "" will be returned.
@@ -30,6 +33,14 @@ int main()
 {
   static long lineNum = 0L;
   uWS::Hub h;
+
+  // Clear the content of the RMSE results file
+  std::ofstream rmseResultFile(rmseResultFileName, std::ios_base::trunc);
+  if (rmseResultFile.is_open())
+  {
+    rmseResultFile << "No;RMSE_x;RMSE_y;RMSE_vx;RMSE_vy" << &std::endl;;
+    rmseResultFile.close();
+  }
 
   // Create a Kalman Filter instance
   FusionEKF fusionEKF;
@@ -94,6 +105,7 @@ int main()
             msgJson["rmse_y"] =  0.0;
             msgJson["rmse_vx"] = 0.0;
             msgJson["rmse_vy"] = 0.0;
+            // Write the next line in the RMSE result file
             auto msg = "42[\"estimate_marker\"," + msgJson.dump() + "]";
             // std::cout << msg << std::endl;
             ws.send(msg.data(), msg.length(), uWS::OpCode::TEXT);
@@ -149,6 +161,17 @@ int main()
 
           std::cout << "estimate: " << p_x << "/" << p_y
               << "  rmse: " << RMSE(0) << "/" << RMSE(1) << ", " << RMSE(2) << "/" << RMSE(3) << std::endl;
+
+          std::ofstream rmseResultFile(rmseResultFileName, std::ios_base::app);
+          if (rmseResultFile.is_open())
+          {
+            rmseResultFile << lineNum << ";"
+                << RMSE(0) << ";"
+                << RMSE(1) << ";"
+                << RMSE(2) << ";"
+                << RMSE(3) << &std::endl;
+            rmseResultFile.close();
+          }
 
           json msgJson;
           msgJson["estimate_x"] = p_x;
