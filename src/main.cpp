@@ -11,7 +11,7 @@ using namespace std;
 using json = nlohmann::json;
 
 // Define the name of the file in which the RMSE results are stored
-std::string rmseResultFileName = "rmse_laserOnly.csv";
+std::string rmseResultFileName = "rmse_withRadar.csv";
 
 // Checks if the SocketIO event has JSON data.
 // If there is data the JSON object in string format will be returned,
@@ -72,7 +72,7 @@ int main()
 
           string sensor_measurment = j[1]["sensor_measurement"];
 
-          std::cout << lineNum << "------ Input: [" << sensor_measurment << "]" << std::endl;
+//          std::cout << lineNum << "------ Input: [" << sensor_measurment << "]" << std::endl;
 
           MeasurementPackage meas_package;
           istringstream iss(sensor_measurment);
@@ -85,8 +85,8 @@ int main()
           if (sensor_type.compare("L") == 0) {
             meas_package.sensor_type_ = MeasurementPackage::LASER;
             meas_package.raw_measurements_ = VectorXd(2);
-            float px;
-            float py;
+            double px;
+            double py;
             iss >> px;
             iss >> py;
             meas_package.raw_measurements_ << px, py;
@@ -94,28 +94,11 @@ int main()
             meas_package.timestamp_ = timestamp;
           }
           else if (sensor_type.compare("R") == 0) {
-
-
-            double p_x = fusionEKF.ekf_.x_(0);
-            double p_y = fusionEKF.ekf_.x_(1);
-            json msgJson;
-            msgJson["estimate_x"] = p_x;
-            msgJson["estimate_y"] = p_y;
-            msgJson["rmse_x"] =  0.0;
-            msgJson["rmse_y"] =  0.0;
-            msgJson["rmse_vx"] = 0.0;
-            msgJson["rmse_vy"] = 0.0;
-            // Write the next line in the RMSE result file
-            auto msg = "42[\"estimate_marker\"," + msgJson.dump() + "]";
-            // std::cout << msg << std::endl;
-            ws.send(msg.data(), msg.length(), uWS::OpCode::TEXT);
-            return;
-
             meas_package.sensor_type_ = MeasurementPackage::RADAR;
             meas_package.raw_measurements_ = VectorXd(3);
-            float ro;
-            float theta;
-            float ro_dot;
+            double ro;
+            double theta;
+            double ro_dot;
             iss >> ro;
             iss >> theta;
             iss >> ro_dot;
@@ -123,10 +106,10 @@ int main()
             iss >> timestamp;
             meas_package.timestamp_ = timestamp;
           }
-          float x_gt;
-          float y_gt;
-          float vx_gt;
-          float vy_gt;
+          double x_gt;
+          double y_gt;
+          double vx_gt;
+          double vy_gt;
           iss >> x_gt;
           iss >> y_gt;
           iss >> vx_gt;
@@ -159,8 +142,8 @@ int main()
 
           VectorXd RMSE = tools.CalculateRMSE(estimations, ground_truth);
 
-          std::cout << "estimate: " << p_x << "/" << p_y
-              << "  rmse: " << RMSE(0) << "/" << RMSE(1) << ", " << RMSE(2) << "/" << RMSE(3) << std::endl;
+//          std::cout << "estimate: " << p_x << "/" << p_y
+//              << "  rmse: " << RMSE(0) << "/" << RMSE(1) << ", " << RMSE(2) << "/" << RMSE(3) << std::endl;
 
           std::ofstream rmseResultFile(rmseResultFileName, std::ios_base::app);
           if (rmseResultFile.is_open())

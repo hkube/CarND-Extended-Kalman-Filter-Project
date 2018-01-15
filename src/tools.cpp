@@ -29,10 +29,14 @@ VectorXd Tools::CalculateRMSE(const vector<VectorXd> &estimations,
     }
 
     //calculate the mean
-    rmse = rmse / static_cast<float>(estimations.size());
+    rmse = rmse / static_cast<double>(estimations.size());
 
     //calculate the squared root
     rmse = rmse.array().sqrt();
+  }
+  else
+  {
+    std::cout << "DATA ERROR: estimations.size(): " << estimations.size() << "  ground_truth.size(): " << ground_truth.size() << std::endl;
   }
 
   return rmse;
@@ -45,22 +49,21 @@ MatrixXd Tools::CalculateJacobian(const VectorXd& x_state) {
    * Calculate a Jacobian here.
    */
 
-  //recover state parameters
-  float px = x_state(0);
-  float py = x_state(1);
-  float vx = x_state(2);
-  float vy = x_state(3);
+  double px = x_state(0);
+  double py = x_state(1);
+  double vx = x_state(2);
+  double vy = x_state(3);
 
   MatrixXd Hj(3,4);
   Hj.setZero();
 
-  //check division by zero
-  if ((0.0 != px) && (0.0 != py))
-  {
-    const float p_dist_2 = px*px + py*py;
-    const float p_dist = sqrt(p_dist_2);
+  const double p_dist_2 = px*px + py*py;
+  const double p_dist = sqrt(p_dist_2);
 
-    //compute the Jacobian matrix
+  // Check if division by zero would happen with the current values
+  if (p_dist > 1e-3)
+  {
+    // Compute the Jacobian matrix
     Hj(0, 0) =  px / p_dist;
     Hj(0, 1) =  py / p_dist;
     Hj(1, 0) = -py / p_dist_2;

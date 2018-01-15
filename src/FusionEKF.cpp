@@ -1,6 +1,7 @@
 #include "FusionEKF.h"
 #include "tools.h"
 #include "Eigen/Dense"
+#include <cmath>
 #include <iostream>
 
 using namespace std;
@@ -82,11 +83,21 @@ void FusionEKF::ProcessMeasurement(const MeasurementPackage &measurement_pack) {
     cout << "EKF - Initialization: " << endl;
 
     if (measurement_pack.sensor_type_ == MeasurementPackage::RADAR) {
-      std::cout << "First Measurement RADAR  -ignored " << &std::endl;
-      return;
+      std::cout << "First Measurement RADAR" << &std::endl;
       /**
       Convert radar from polar to cartesian coordinates and initialize state.
       */
+      const double rho    = measurement_pack.raw_measurements_[0];
+      const double phi    = measurement_pack.raw_measurements_[1];
+      const double rhodot = measurement_pack.raw_measurements_[2];
+      const double sin_phi = std::sin(phi);
+      const double cos_phi = std::cos(phi);
+      const double x = rho * cos_phi;
+      const double y = rho * sin_phi;
+      const double vx = rhodot * cos_phi;
+      const double vy = rhodot * sin_phi;
+
+      ekf_.x_ << x, y, vx, vy;
     }
     else if (measurement_pack.sensor_type_ == MeasurementPackage::LASER) {
       std::cout << "First Measurement LASER" << &std::endl;
@@ -96,12 +107,10 @@ void FusionEKF::ProcessMeasurement(const MeasurementPackage &measurement_pack) {
       ekf_.x_ << measurement_pack.raw_measurements_[0],
                  measurement_pack.raw_measurements_[1],
                  0, 0;
-      std::cout << "ekf_.x_: [" << ekf_.x_ << "]" << std::endl;
     }
 
     // done initializing, no need to predict or update
     is_initialized_ = true;
-//    return;
   }
   else {
 
@@ -117,17 +126,17 @@ void FusionEKF::ProcessMeasurement(const MeasurementPackage &measurement_pack) {
      * Use noise_ax = 9 and noise_ay = 9 for your Q matrix.
      */
     // Calculate the time difference and update the state transition matrix
-    float deltaT = float(measurement_pack.timestamp_ - previous_timestamp_) / 1e6;
+    double deltaT = double(measurement_pack.timestamp_ - previous_timestamp_) / 1e6;
     ekf_.F_(0, 2) = deltaT;
     ekf_.F_(1, 3) = deltaT;
 
 
     // Update the process noise covariant matrix
-    const float deltaT_2 = deltaT   * deltaT;
-    const float deltaT_3 = deltaT_2 * deltaT;
-    const float deltaT_4 = deltaT_3 * deltaT;
-    const float noise_ax = 9;
-    const float noise_ay = 9;
+    const double deltaT_2 = deltaT   * deltaT;
+    const double deltaT_3 = deltaT_2 * deltaT;
+    const double deltaT_4 = deltaT_3 * deltaT;
+    const double noise_ax = 9;
+    const double noise_ay = 9;
 
     ekf_.Q_ = MatrixXd(4, 4);
     ekf_.Q_.setZero();
@@ -140,18 +149,14 @@ void FusionEKF::ProcessMeasurement(const MeasurementPackage &measurement_pack) {
     ekf_.Q_(2, 2) = deltaT_2 * noise_ax;
     ekf_.Q_(3, 3) = deltaT_2 * noise_ay;
 
-    std::cout << "-- Before prediction" << std::endl;
-//    std::cout << " ekf_.F_: [" << ekf_.F_ << "]" << std::endl;
-//    std::cout << " ekf_.P_: [" << ekf_.P_ << "]" << std::endl;
-//    std::cout << " ekf_.Q_: [" << ekf_.Q_ << "]" << std::endl;
-    std::cout << " ekf_.x_: [" << ekf_.x_.transpose() << "]" << std::endl;
+//    std::cout << "-- Before prediction" << std::endl;
+//    std::cout << " ekf_.x_: [" << ekf_.x_.transpose() << "]" << std::endl;
 
     // Predict the new state
     ekf_.Predict();
 
-    std::cout << "-- After predition" << std::endl;
-//    std::cout << " ekf_.P_: [" << ekf_.P_ << "]" << std::endl;
-    std::cout << " ekf_.x_: [" << ekf_.x_.transpose() << "]" << std::endl;
+//    std::cout << "-- After predition" << std::endl;
+//    std::cout << " ekf_.x_: [" << ekf_.x_.transpose() << "]" << std::endl;
 
     /*****************************************************************************
      *  Update
@@ -165,11 +170,12 @@ void FusionEKF::ProcessMeasurement(const MeasurementPackage &measurement_pack) {
 
     if (measurement_pack.sensor_type_ == MeasurementPackage::RADAR) {
       // Radar updates
-      std::cout << "Measurement RADAR  -ignored " << &std::endl;
+//      std::cout << "Measurement RADAR" << &std::endl;
       ekf_.R_ = R_radar_;
+      ekf_.UpdateEKF(measurement_pack.raw_measurements_);
     } else {
       // Laser updates
-      std::cout << "Measurement LASER" << &std::endl;
+//      std::cout << "Measurement LASER" << &std::endl;
       ekf_.R_ = R_laser_;
       ekf_.Update(measurement_pack.raw_measurements_);
     }
