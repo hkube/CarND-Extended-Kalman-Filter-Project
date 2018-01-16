@@ -12,6 +12,10 @@ using std::vector;
 #define IGNORE_RADAR_DATA 0
 #define IGNORE_LASER_DATA 0
 
+#if IGNORE_LASER_DATA && IGNORE_RADAR_DATA
+#error You must not ignore all data!
+#endif
+
 /*
  * Constructor.
  */
