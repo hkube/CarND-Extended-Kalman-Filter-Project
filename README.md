@@ -31,7 +31,7 @@ The tables below show the RMSE result that were obtained by this implementation.
 
 The image below shows the tracking results using radar data and lidar data of dataset 1:
 
-![](results_dataset_1.png) 
+![Tracking Results](./results_dataset_1.png) 
 
 
 
