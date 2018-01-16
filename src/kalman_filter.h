@@ -5,9 +5,6 @@
 class KalmanFilter {
 public:
 
-  // measurement covariance matrix
-//  Eigen::MatrixXd R_;
-
   /**
    * Constructor
    */
