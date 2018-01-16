@@ -9,6 +9,9 @@ using Eigen::MatrixXd;
 using Eigen::VectorXd;
 using std::vector;
 
+#define IGNORE_RADAR_DATA 0
+#define IGNORE_LASER_DATA 0
+
 /*
  * Constructor.
  */
@@ -62,6 +65,15 @@ FusionEKF::~FusionEKF() {}
 
 void FusionEKF::ProcessMeasurement(const MeasurementPackage &measurement_pack) {
 
+#if IGNORE_LASER_DATA
+  if (measurement_pack.sensor_type_ == MeasurementPackage::LASER) {
+    return;
+  }
+#elif IGNORE_RADAR_DATA
+  if (measurement_pack.sensor_type_ == MeasurementPackage::RADAR) {
+    return;
+  }
+#endif
   /*****************************************************************************
    *  Initialization
    ****************************************************************************/
