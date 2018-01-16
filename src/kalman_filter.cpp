@@ -8,57 +8,89 @@ using Eigen::VectorXd;
 // Please note that the Eigen library does not initialize 
 // VectorXd or MatrixXd objects with zeros upon creation.
 
-KalmanFilter::KalmanFilter() {}
+KalmanFilter::KalmanFilter()
+: x_(4)
+, P_(4, 4)
+, F_(4, 4)
+, Q_(4, 4)
+, H_(2, 4)
+, Ht_(4, 2) {
+  // Set all matrices to zero
+  x_.setZero();
+  P_.setZero();
+  F_.setZero();
+  Q_.setZero();
+  H_.setZero();
+  Ht_.setZero();
+}
+
 
 KalmanFilter::~KalmanFilter() {}
 
-#if 0
-void KalmanFilter::Init(VectorXd &x_in, MatrixXd &P_in, MatrixXd &F_in,
-                        MatrixXd &H_in, MatrixXd &R_in, MatrixXd &Q_in) {
-  x_ = x_in;
+
+void KalmanFilter::Init(const MatrixXd & P_in,
+                        const MatrixXd & F_in,
+                        const MatrixXd & H_in) {
   P_ = P_in;
   F_ = F_in;
   H_ = H_in;
-  R_ = R_in;
-  Q_ = Q_in;
+  Ht_ = H_.transpose();
 }
-#endif
 
-void KalmanFilter::Predict() {
+
+void KalmanFilter::InitX(const VectorXd & x_in) {
+  x_ = x_in;
+  // Initialize the identity matrix
+  const long x_rows = x_.rows();
+  I_ = MatrixXd::Identity(x_rows, x_rows);
+}
+
+
+void KalmanFilter::Predict(const double deltaT,
+                           const double noise_ax,
+                           const double noise_ay) {
+  // Update the state transition matrix
+  F_(0, 2) = deltaT;
+  F_(1, 3) = deltaT;
+
+  // Update the process noise covariant matrix
+  const double deltaT_2 = deltaT   * deltaT;
+  const double deltaT_3 = deltaT_2 * deltaT;
+  const double deltaT_4 = deltaT_3 * deltaT;
+
+  Q_.setZero();
+  Q_(0, 0) = deltaT_4 / 4 * noise_ax;
+  Q_(1, 1) = deltaT_4 / 4 * noise_ay;
+  Q_(0, 2) = deltaT_3 / 2 * noise_ax;
+  Q_(1, 3) = deltaT_3 / 2 * noise_ay;
+  Q_(2, 0) = deltaT_3 / 2 * noise_ax;
+  Q_(3, 1) = deltaT_3 / 2 * noise_ay;
+  Q_(2, 2) = deltaT_2 * noise_ax;
+  Q_(3, 3) = deltaT_2 * noise_ay;
+
   /**
-  TODO:
-    * predict the state
-  */
+   * predict the state
+   */
   x_ = F_ * x_;
-  MatrixXd Ft = F_.transpose(); // TODO Should be calculated only once!
-  P_ = F_ * P_ * Ft + Q_;
+  P_ = F_ * P_ * F_.transpose() + Q_;
 }
 
-void KalmanFilter::Update(const VectorXd &z) {
+
+void KalmanFilter::Update(const VectorXd &z, const MatrixXd & R) {
   /**
-  TODO:
-    * update the state by using Kalman Filter equations
-  */
+   * update the state by using Kalman Filter equations
+   */
   VectorXd z_pred = H_ * x_;
   VectorXd y = z - z_pred;
-  MatrixXd Ht = H_.transpose(); // TODO Should be calculated only once!
-  MatrixXd PHt = P_ * Ht;
-  MatrixXd S = H_ * PHt + R_;
-//  MatrixXd Si = S.inverse();
-  MatrixXd K = PHt * S.inverse();
 
-  //new estimate
-  x_ = x_ + (K * y);
-  long x_rows = x_.size();  // TODO Use rows() here!
-  MatrixXd I = MatrixXd::Identity(x_rows, x_rows); // TODO Should be calculated only once!
-  P_ = (I - K * H_) * P_;
+  DoUpdate(y, R, H_, Ht_);
 }
 
-void KalmanFilter::UpdateEKF(const VectorXd &z) {
+
+void KalmanFilter::UpdateEKF(const VectorXd &z, const MatrixXd & R) {
   /**
-  TODO:
-    * update the state by using Extended Kalman Filter equations
-  */
+   * update the state by using Extended Kalman Filter equations
+   */
   const double px_min = 0.001;
   const double rho_min = 0.001;
   const double px = x_(0);
@@ -80,16 +112,29 @@ void KalmanFilter::UpdateEKF(const VectorXd &z) {
   // Refer to https://discussions.udacity.com/t/ekf-gets-off-track/276122/9
   y(1) = std::atan2( sin(y(1)), cos(y(1)));
 
+  DoUpdate(y, R, Hj, Hj.transpose());
+}
 
-  MatrixXd PHjt = P_ * Hj.transpose();
-  MatrixXd S = Hj * PHjt + R_;
-//  MatrixXd Si = S.inverse();
-  MatrixXd K = PHjt * S.inverse();
+void KalmanFilter::DoUpdate(const VectorXd & y,
+                            const MatrixXd & R,
+                            const MatrixXd & H,
+                            const MatrixXd & Ht) {
+
+  MatrixXd PHt = P_ * Ht;
+  MatrixXd S = H * PHt + R;
+  MatrixXd K = PHt * S.inverse();
 
   //new estimate
   x_ = x_ + (K * y);
+  P_ = (I_ - K * H) * P_;
+}
 
-  long x_rows = x_.rows();  // TODO Use rows() here!
-  MatrixXd I = MatrixXd::Identity(x_rows, x_rows); // TODO Should be calculated only once!
-  P_ = (I - K * Hj) * P_;
+
+const Eigen::VectorXd & KalmanFilter::getX() const {
+  return x_;
+}
+
+
+const Eigen::MatrixXd & KalmanFilter::getP() const {
+  return P_;
 }

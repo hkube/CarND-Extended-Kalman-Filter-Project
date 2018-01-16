@@ -5,16 +5,11 @@ using Eigen::VectorXd;
 using Eigen::MatrixXd;
 using std::vector;
 
-Tools::Tools() {}
-
-Tools::~Tools() {}
-
 VectorXd Tools::CalculateRMSE(const vector<VectorXd> &estimations,
                               const vector<VectorXd> &ground_truth) {
   /**
-  TODO:
-    * Calculate the RMSE here.
-  */
+   * Calculate the RMSE here.
+   */
   VectorXd rmse(4);
   rmse.setZero();
 
@@ -45,20 +40,19 @@ VectorXd Tools::CalculateRMSE(const vector<VectorXd> &estimations,
 
 MatrixXd Tools::CalculateJacobian(const VectorXd& x_state) {
   /**
-  TODO:
    * Calculate a Jacobian here.
    */
 
-  double px = x_state(0);
-  double py = x_state(1);
-  double vx = x_state(2);
-  double vy = x_state(3);
+  const double px = x_state(0);
+  const double py = x_state(1);
+  const double vx = x_state(2);
+  const double vy = x_state(3);
 
   MatrixXd Hj(3,4);
   Hj.setZero();
 
   const double p_dist_2 = px*px + py*py;
-  const double p_dist = sqrt(p_dist_2);
+  const double p_dist   = sqrt(p_dist_2);
 
   // Check if division by zero would happen with the current values
   if (p_dist > 1e-3)

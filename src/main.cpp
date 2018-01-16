@@ -46,11 +46,10 @@ int main()
   FusionEKF fusionEKF;
 
   // used to compute the RMSE later
-  Tools tools;
   vector<VectorXd> estimations;
   vector<VectorXd> ground_truth;
 
-  h.onMessage([&fusionEKF,&tools,&estimations,&ground_truth](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length, uWS::OpCode opCode) {
+  h.onMessage([&fusionEKF, &estimations, &ground_truth](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length, uWS::OpCode opCode) {
     // "42" at the start of the message means there's a websocket message event.
     // The 4 signifies a websocket message
     // The 2 signifies a websocket event
@@ -125,24 +124,13 @@ int main()
           fusionEKF.ProcessMeasurement(meas_package);
 
           //Push the current estimated x,y positon from the Kalman filter's state vector
-
-          VectorXd estimate(4);
-
-          double p_x = fusionEKF.ekf_.x_(0);
-          double p_y = fusionEKF.ekf_.x_(1);
-          double v1  = fusionEKF.ekf_.x_(2);
-          double v2 = fusionEKF.ekf_.x_(3);
-
-          estimate(0) = p_x;
-          estimate(1) = p_y;
-          estimate(2) = v1;
-          estimate(3) = v2;
+          const VectorXd & estimate = fusionEKF.getX();
 
           estimations.push_back(estimate);
 
-          VectorXd RMSE = tools.CalculateRMSE(estimations, ground_truth);
+          VectorXd RMSE = Tools::CalculateRMSE(estimations, ground_truth);
 
-//          std::cout << "estimate: " << p_x << "/" << p_y
+//          std::cout << "estimate: " << estimate(0) << "/" << estimate(1)
 //              << "  rmse: " << RMSE(0) << "/" << RMSE(1) << ", " << RMSE(2) << "/" << RMSE(3) << std::endl;
 
           std::ofstream rmseResultFile(rmseResultFileName, std::ios_base::app);
@@ -157,12 +145,12 @@ int main()
           }
 
           json msgJson;
-          msgJson["estimate_x"] = p_x;
-          msgJson["estimate_y"] = p_y;
-          msgJson["rmse_x"] =  RMSE(0);
-          msgJson["rmse_y"] =  RMSE(1);
-          msgJson["rmse_vx"] = RMSE(2);
-          msgJson["rmse_vy"] = RMSE(3);
+          msgJson["estimate_x"] = estimate(0);
+          msgJson["estimate_y"] = estimate(1);
+          msgJson["rmse_x"]     = RMSE(0);
+          msgJson["rmse_y"]     = RMSE(1);
+          msgJson["rmse_vx"]    = RMSE(2);
+          msgJson["rmse_vy"]    = RMSE(3);
           auto msg = "42[\"estimate_marker\"," + msgJson.dump() + "]";
           // std::cout << msg << std::endl;
           ws.send(msg.data(), msg.length(), uWS::OpCode::TEXT);
